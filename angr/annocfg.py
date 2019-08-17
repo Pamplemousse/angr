@@ -1,4 +1,5 @@
 from collections import defaultdict
+from functools import reduce
 import logging
 
 import networkx
@@ -148,6 +149,48 @@ class AnnotatedCFG:
 
         else:
             return []
+
+    def get_addresses_in_slice(self):
+        return reduce(
+            lambda acc, exits: list(set(acc + exits)),
+            self._exit_taken.values(),
+            list(self._exit_taken.keys())
+        )
+
+    def get_functions(self):
+        """
+        :return list<angr.knowledge_plugins.functions.function.Function>:
+            The list of functions which entrypoint are present in the CFG.
+            Note that part of the function implementation can be absent from the slice.
+        """
+        cfg_kb_functions = self._cfg._model._cfg_manager._kb.functions
+        all_functions_map = cfg_kb_functions._function_map
+
+        addresses_in_slice = self.get_addresses_in_slice()
+
+        return dict(filter(
+            lambda f: f[0] in addresses_in_slice,
+            all_functions_map.items()
+        ))
+
+
+    def get_function_graph(self, function):
+        """
+        :return networkx.DiGraph: The graph of the function, containing only the whitelisted nodes.
+        """
+        assert (self.get_functions().get(function.addr) is not None), 'The function is not part of the slice!'
+
+        addresses_in_slice = self.get_addresses_in_slice()
+        nodes_to_remove = list(filter(
+            lambda b: b.addr not in addresses_in_slice,
+            function.nodes
+        ))
+
+        graph = function.transition_graph.copy()
+        graph.remove_nodes_from(nodes_to_remove)
+
+        return graph
+
 
     def get_last_statement_index(self, addr):
         """

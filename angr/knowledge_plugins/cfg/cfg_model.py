@@ -5,6 +5,8 @@ from collections import defaultdict
 
 import networkx
 
+from functools import reduce
+
 from ...protos import cfg_pb2, primitives_pb2
 from ...serializable import Serializable
 from ...utils.enums_conv import cfg_jumpkind_to_pb, cfg_jumpkind_from_pb
@@ -270,6 +272,40 @@ class CFGModel(Serializable):
         """
 
         return self.graph.nodes()
+
+    def get_nodes_for_function(self, function):
+        """
+        Get the list of nodes belonging to a function.
+        Recursively constructed: looping through predecessors until reaching function definitions.
+
+        :param angr.knowledge_plugins.functions.function.Function function: The function to get the nodes from.
+        :return list<CFGNode>: The list of nodes belonging to the function.
+        """
+        def _is_not_another_function_entrypoint(node):
+            return (
+                node.addr == function.addr or
+                self._cfg_manager._kb.functions.function(node.addr) is None
+            )
+
+        def _get_successors(node):
+            legit_successors = list(filter(
+                _is_not_another_function_entrypoint,
+                node.successors
+            ))
+
+            if legit_successors == []:
+                return [node]
+
+            return reduce(
+                lambda acc, successor: list(set(acc + _get_successors(successor))),
+                legit_successors,
+                []
+            )
+
+        function_nodes = self.get_all_nodes(function.addr)
+        assert (len(function_nodes) == 1), 'Current implementation does not deal with several implementation for a single function.'
+        return _get_successors(function_nodes[0])
+
 
     def get_predecessors(self, cfgnode, excluding_fakeret=True, jumpkind=None):
         """
