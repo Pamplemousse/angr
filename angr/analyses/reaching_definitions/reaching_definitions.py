@@ -7,6 +7,7 @@ import ailment
 import pyvex
 
 from ...block import Block
+from ...knowledge_plugins.cfg.cfg_node import CFGNode
 from ...codenode import CodeNode
 from ...misc.ux import deprecated
 from ..analysis import Analysis
@@ -43,7 +44,8 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
                  current_local_call_depth=1, maximum_local_call_depth=5, observe_all=False, visited_blocks=None,
                  dep_graph=None, observe_callback=None):
         """
-        :param Block|Function subject: The subject of the analysis: a function, or a single basic block.
+        :param Block|Function|SliceToSink subject:
+                                                The subject of the analysis: a function, or a single basic block.
         :param func_graph:                      Alternative graph for function.graph.
         :param int max_iterations:              The maximum number of iterations before the analysis is terminated.
         :param Boolean track_tmps:              Whether or not temporary variables should be taken into consideration
@@ -258,6 +260,12 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
             block = self.project.factory.block(node.addr, node.size, opt_level=0)
             block_key = node.addr
             engine = self._engine_vex
+        elif isinstance(node, CFGNode):
+            if node.is_simprocedure or node.is_syscall:
+                return False, state.copy()
+            block = node.block
+            block_key = node.addr
+            engine = self._engine_vex
         else:
             l.warning("Unsupported node type %s.", node.__class__)
             return False, state.copy()
@@ -280,6 +288,8 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
                 codeloc = CodeLocation(node.addr, len(node.statements))
             elif isinstance(node, Block):
                 codeloc = CodeLocation(node.addr, len(node.vex.statements))
+            elif isinstance(node, CFGNode):
+                codeloc = CodeLocation(node.addr, len(node.block.vex.statements))
             else: #if isinstance(node, CodeNode):
                 codeloc = CodeLocation(node.addr, 0)
             state.kill_definitions(Register(self.project.arch.sp_offset, self.project.arch.bytes),
