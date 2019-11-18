@@ -22,15 +22,13 @@ from .engine_vex import SimEngineRDVEX
 l = logging.getLogger(name=__name__)
 
 
-class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=abstract-method
+class DataDependenciesAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=abstract-method
     """
-    ReachingDefinitionsAnalysis is a text-book implementation of a static data-flow analysis that works on either a
+    DataDependenciesAnalysis is a text-book implementation of a static data-flow analysis that works on either a
     function or a block. It supports both VEX and AIL. By registering observers to observation points, users may use
     this analysis to generate use-def chains, def-use chains, and reaching definitions, and perform other traditional
     data-flow analyses such as liveness analysis.
 
-    * I've always wanted to find a better name for this analysis. Now I gave up and decided to live with this name for
-      the foreseeable future (until a better name is proposed by someone else).
     * Aliasing is definitely a problem, and I forgot how aliasing is resolved in this implementation. I'll leave this
       as a post-graduation TODO.
     * Some more documentation and examples would be nice.
@@ -54,7 +52,7 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
         :param Boolean init_func:               Whether stack and arguments are initialized or not.
         :param SimCC cc:                        Calling convention of the function.
         :param list function_handler:           Handler for functions, naming scheme: handle_<func_name>|local_function(
-                                                <ReachingDefinitions>, <Codeloc>, <IP address>).
+                                                <LiveDefinitions>, <Codeloc>, <IP address>).
         :param int current_local_call_depth:    Current local function recursion depth.
         :param int maximum_local_call_depth:    Maximum local function recursion depth.
         :param Boolean observe_all:             Observe every statement, both before and after.
@@ -102,7 +100,7 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
         if self._observation_points and any(not type(op) is tuple for op in self._observation_points):
             raise ValueError('"observation_points" must be tuples.')
 
-        if type(self) is ReachingDefinitionsAnalysis and not self._observe_all and not self._observation_points:
+        if type(self) is DataDependenciesAnalysis and not self._observe_all and not self._observation_points:
             l.warning('No observation point is specified. '
                       'You cannot get any analysis result from performing the analysis.'
                       )
