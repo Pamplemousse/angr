@@ -329,6 +329,11 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
 
         self._node_iterations[block_key] += 1
 
+        # The Slice analysis happens recursively, so there will be no need to "start" any RDA from nodes that were
+        # analysed "down the stack" during a run on a node.
+        if self._subject.type == SubjectType.SliceToSink:
+            self._graph_visitor.remove_from_sorted_nodes(self._visited_blocks)
+
         if not self._graph_visitor.successors(node):
             # no more successors. kill definitions of certain registers
             if isinstance(node, ailment.Block):

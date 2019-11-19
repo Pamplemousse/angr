@@ -478,8 +478,16 @@ class SimEngineRDVEX(
         elif is_internal is True:
             handler_name = 'handle_local_function'
             if hasattr(self._function_handler, handler_name):
+                exit_target_of_the_current_block = args[0].data
+
+                if len(exit_target_of_the_current_block) != 1:
+                    l.error('Too many possible exit targets for the current block.')
+                    return None
+
+                target_function_address = next(iter(exit_target_of_the_current_block))
+
                 executed_rda, state = getattr(self._function_handler, handler_name)(self.state,
-                                                                                    ip_addr,
+                                                                                    target_function_address,
                                                                                     self._call_stack,
                                                                                     self._maximum_local_call_depth,
                                                                                     self._codeloc(),

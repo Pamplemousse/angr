@@ -419,7 +419,15 @@ class SimEngineRDAIL(
         elif is_internal is True:
             handler_name = 'handle_local_function'
             if hasattr(self._function_handler, handler_name):
-                is_updated, state = getattr(self._function_handler, handler_name)(self.state, ip_addr,
+                exit_target_of_the_current_block = args[0].data
+
+                if len(exit_target_of_the_current_block) != 1:
+                    l.error('Too many possible exit targets for the current block.')
+                    return None
+
+                target_function_address = next(iter(exit_target_of_the_current_block))
+
+                is_updated, state = getattr(self._function_handler, handler_name)(self.state, target_function_address,
                                                                                   self._current_local_call_depth + 1,
                                                                                   self._maximum_local_call_depth)
                 if is_updated is True:
