@@ -44,7 +44,7 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
     def __init__(self, subject=None, func_graph=None, max_iterations=3, track_tmps=False,
                  observation_points=None, init_state=None, cc=None, function_handler=None,
                  call_stack=[], maximum_local_call_depth=5, observe_all=False, visited_blocks=None,
-                 dep_graph=None, observe_callback=None):
+                 dep_graph=None, observe_callback=None, context=None):
         """
         :param Block|Function|SliceToSink subject:
                                                 The subject of the analysis: a function, or a single basic block.
@@ -71,6 +71,9 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
                                                 A list of previously visited blocks.
         :param Optional[DepGraph] dep_graph:    An initial dependency graph to add the result of the analysis to. Set it
                                                 to None to skip dependency graph generation.
+        :param Tuple[List[Function],CodeLocation] context:
+                                                The function context: its callstack (as a list of function), and code
+                                                location of its call.
         """
 
         self._subject = Subject(subject, self.kb.cfgs['CFGFast'], func_graph, cc)
@@ -131,9 +134,9 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
 
         self._node_iterations = defaultdict(int)
 
-        self._engine_vex = SimEngineRDVEX(self.project, self._current_local_call_depth, self._maximum_local_call_depth,
+        self._engine_vex = SimEngineRDVEX(self.project, self._call_stack, self._maximum_local_call_depth,
                                           self._function_handler)
-        self._engine_ail = SimEngineRDAIL(self.project, self._current_local_call_depth, self._maximum_local_call_depth,
+        self._engine_ail = SimEngineRDAIL(self.project, self._call_stack, self._maximum_local_call_depth,
                                           self._function_handler)
 
         self._visited_blocks = visited_blocks or []
