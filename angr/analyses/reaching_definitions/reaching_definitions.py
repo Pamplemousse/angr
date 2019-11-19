@@ -61,8 +61,9 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
                                                 Default to None: the analysis then initialize its own abstract state,
                                                 based on the given <Subject>.
         :param SimCC cc:                        Calling convention of the function.
-        :param list function_handler:           Handler for functions, naming scheme: handle_<func_name>|local_function(
-                                                <ReachingDefinitions>, <Codeloc>, <IP address>).
+        :param FunctionHandler function_handler:
+                                                The function handler to update the analysis state and results on
+                                                function calls.
         :param List[Function] call_stack:       An ordered list of Functions representing the call stack leading to the
                                                 analysed subject, from older to newer calls.
         :param int maximum_local_call_depth:    Maximum local function recursion depth.
@@ -89,12 +90,16 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
         self._max_iterations = max_iterations
         self._observation_points = observation_points
         self._init_state = init_state
-        self._function_handler = function_handler
         self._maximum_local_call_depth = maximum_local_call_depth
 
         self._dep_graph = dep_graph
         self.current_codeloc = None
         self.codeloc_uses = set()
+
+        if function_handler is None:
+            self._function_handler = function_handler
+        else:
+            self._function_handler = function_handler.hook(self)
 
         def _init_call_stack(call_stack, subject):
             if self._subject.type == SubjectType.Function:
