@@ -170,7 +170,6 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
             self.kb.functions._function_map.values()
         ))
 
-
     @property
     def one_result(self):
 
@@ -325,12 +324,13 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
         self.node_observe(node.addr, state, OP_BEFORE)
 
         state = state.copy()
-        state, self._visited_blocks = engine.process(
+        state, self._visited_blocks, self._dep_graph = engine.process(
             state,
             block=block,
             fail_fast=self._fail_fast,
-            visited_blocks=self._visited_blocks
-        )  # type: LiveDefinitions, set
+            visited_blocks=self._visited_blocks,
+            dep_graph=self._dep_graph,
+        ) # type: LiveDefinitions, Set, DepGraph
 
         self._node_iterations[block_key] += 1
 

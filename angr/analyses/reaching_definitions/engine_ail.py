@@ -427,16 +427,18 @@ class SimEngineRDAIL(
 
                 target_function_address = next(iter(exit_target_of_the_current_block))
 
-                is_updated, state, visited_blocks = getattr(self._function_handler, handler_name)(
+                is_updated, state, visited_blocks, dep_graph = getattr(self._function_handler, handler_name)(
                     self.state,
                     target_function_address,
                     self._current_local_call_depth + 1,
                     self._maximum_local_call_depth,
                     self._visited_blocks,
+                    self._dep_graph,
                 )
 
                 self.state = state
                 self._visited_blocks = visited_blocks
+                self._dep_graph = dep_graph
             else:
                 l.warning('Please implement the local function handler with your own logic.')
         else:
