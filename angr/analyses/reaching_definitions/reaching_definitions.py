@@ -14,7 +14,7 @@ from ...misc.ux import deprecated
 from ..analysis import Analysis
 from ..forward_analysis import ForwardAnalysis
 from ..code_location import CodeLocation
-from ..slice_to_sink import slice_graph
+from ..slice_to_sink import slice_function_graph
 from .atoms import Register
 from .constants import OP_BEFORE, OP_AFTER
 from .engine_ail import SimEngineRDAIL
@@ -139,7 +139,7 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
         # Remove the nodes that are not in the slice from the functions' graphs.
         def _update_function_graph(slice_to_sink, function):
             if len(function.graph.nodes()) > 1:
-                slice_graph(function.graph, slice_to_sink)
+                slice_function_graph(function.graph, slice_to_sink)
         list(map(
             partial(_update_function_graph, self._subject.content),
             self.kb.functions._function_map.values()
