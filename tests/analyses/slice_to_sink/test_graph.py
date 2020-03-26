@@ -201,3 +201,41 @@ def test_context_sensitize_can_deal_with_function_never_called():
     nose.tools.assert_equals(nodes[0].successors[0].addr, nodes[2].addr)
     nose.tools.assert_not_equals(nodes[0].successors[0], nodes[2])
     nose.tools.assert_equals(context_sensitive_graph, graph)
+
+
+def test_context_sensitize_can_deal_with_multiple_blocks_long_functions():
+    # Build the following graph (addresses displayed):
+    # 0 -> 2, 1 -> 2, 2 -> 3, 3 -> 4, 3 -> 5
+    # Where:
+    #   * 2 is the first, and 3 the second block of a function
+    #   * 0 calls 2, which returns to 4 => 0.addr + 0.size = 4.addr
+    #   * 1 calls 2, which returns to 5 => 1.addr + 1.size = 5.addr
+    graph = networkx.DiGraph()
+    nodes = list(map(
+        lambda i: _MockCFGNode(i, graph=graph),
+        range(6)
+    ))
+    graph.add_edge(nodes[0], nodes[2])
+    graph.add_edge(nodes[1], nodes[2])
+    graph.add_edge(nodes[2], nodes[3])
+    graph.add_edge(nodes[3], nodes[4])
+    graph.add_edge(nodes[3], nodes[5])
+    setattr(nodes[2], 'function_address', 2)
+    setattr(nodes[3], 'function_address', 2)
+    setattr(nodes[0], 'size', 4)
+    setattr(nodes[1], 'size', 4)
+    # Make sure the test setup is correct
+    assert nodes[0].addr + nodes[0].size == nodes[4].addr
+    assert nodes[1].addr + nodes[1].size == nodes[5].addr
+
+    context_sensitive_graph = context_sensitize(graph)
+
+    nose.tools.assert_equals(nodes[0].successors[0].addr, nodes[2].addr)
+    nose.tools.assert_equals(nodes[0].successors[0].successors[0].addr, nodes[3].addr)
+    nose.tools.assert_equals(nodes[1].successors[0].addr, nodes[2].addr)
+    nose.tools.assert_equals(nodes[1].successors[0].successors[0].addr, nodes[3].addr)
+    nose.tools.assert_not_equals(nodes[0].successors[0], nodes[1].successors[0])
+    nose.tools.assert_not_equals(nodes[0].successors[0].successors[0], nodes[1].successors[0].successors[0])
+    nose.tools.assert_equals(nodes[4].predecessors[0].addr, nodes[3].addr)
+    nose.tools.assert_equals(nodes[5].predecessors[0].addr, nodes[3].addr)
+    nose.tools.assert_equals(context_sensitive_graph, graph)
