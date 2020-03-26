@@ -68,3 +68,58 @@ def slice_function_graph(function_graph, slice_to_sink):
     function_graph.remove_nodes_from(nodes_to_remove)
 
     return function_graph
+
+
+def context_sensitize(graph):
+    """
+    Update a graph to make it "context-sensitive": duplicate blocks representing functions called more than once in the binary,
+    so they have one entry point (coming from a `call`), and one exit point (representing a `return`).
+
+    *Note* that this function mutates the graph passed as an argument.
+
+    :param networkx.DiGraph graph: The graph to make context-sensitive.
+
+    :return networkx.DiGraph: The updated graph.
+    """
+    def _node_and_its_return(predecessor, successors):
+        potential_return = list(filter(
+            lambda s: predecessor.addr + predecessor.size == s.addr,
+            successors
+        ))
+        return None if len(potential_return) < 1 else (predecessor, potential_return[0])
+
+    def _context_sensitize_function(graph, calling_node, return_node, function_node):
+        """
+        Context sensitize a function, for one specific call, and return.
+        """
+        if len(function_node.predecessors) == 1 and len(function_node.successors) == 1:
+            return
+
+        graph.remove_edge(calling_node, function_node)
+        graph.remove_edge(function_node, return_node)
+
+        new_function_node = function_node.copy()
+
+        graph.add_node(new_function_node)
+        graph.add_edge(calling_node, new_function_node)
+        graph.add_edge(new_function_node, return_node)
+
+
+    function_nodes = list(filter(
+        lambda n: n.addr == n.function_address and (len(n.predecessors) > 1 or len(n.successors) > 1),
+        graph.nodes()
+    ))
+
+    for function_node in function_nodes:
+        calling_nodes_and_returns = list(filter(
+            None.__ne__,
+            map(
+                lambda p: _node_and_its_return(p, function_node.successors),
+                function_node.predecessors
+            )
+        ))
+
+        for calling_node, return_node in calling_nodes_and_returns:
+            _context_sensitize_function(graph, calling_node, return_node, function_node)
+
+    return graph
