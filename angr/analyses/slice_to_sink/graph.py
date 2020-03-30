@@ -171,18 +171,41 @@ def context_sensitize(graph):
             )
         )
 
+    def _called_simprocedure(function):
+        if len(function.successors) != 1:
+            return None
+        successor = function.successors[0]
+        return successor if successor.is_simprocedure else None
+
+
     # Blocks to context-sensitize are:
     #   * function entrypoints
     #   * called or returning more than once
+    #   * not simprocedures
     function_entries = list(filter(
-        lambda n: n.addr == n.function_address and (len(n.predecessors) > 1 or len(n.successors) > 1),
+        lambda n: (
+            n.addr == n.function_address
+            and (len(n.predecessors) > 1 or len(n.successors) > 1)
+            and n.is_simprocedure == False
+        ),
         graph.nodes()
     ))
 
-    for function_entry in function_entries:
-        f_edges, f_return_edges, f_nodes, f_returns = _node_successors_for_function(function_entry)
+    function_and_simprocedure_entries = list(map(
+        lambda f: (f, _called_simprocedure(f)),
+        function_entries
+    ))
+
+    for (function_entry, simprocedure_entry) in function_and_simprocedure_entries:
+        f_edges, f_return_edges, f_nodes, f_returns = _node_successors_for_function(
+            simprocedure_entry or function_entry
+        )
+
         function_edges = list(f_edges)
         function_nodes = list({ function_entry } | f_nodes)
+        if simprocedure_entry:
+            function_edges += [(function_entry, simprocedure_entry)]
+            function_nodes += [ simprocedure_entry ]
         function_returns = list(f_returns)
         function_return_edges = list(f_return_edges)
 
@@ -200,6 +223,7 @@ def context_sensitize(graph):
                 lambda e: e[1] == return_node,
                 function_return_edges
             ))[0]
+
             _context_sensitize_function(graph, calling_edge, return_edge, function_nodes, function_edges)
 
     return graph
