@@ -287,3 +287,43 @@ def test_context_sensitize_can_deal_with_simprocedures():
     nose.tools.assert_equals(nodes[4].predecessors[0].addr, nodes[3].addr)
     nose.tools.assert_equals(nodes[5].predecessors[0].addr, nodes[3].addr)
     nose.tools.assert_equals(context_sensitive_graph, graph)
+
+
+def test_context_sensitize_should_keep_data_related_to_transitions():
+    # Build the following graph (addresses displayed):
+    # 0 -> 2, 1 -> 2, 2 -> 3, 2 -> 4
+    # Where:
+    #   * 2 is the first, and 3 the second block of a function
+    #   * 0 calls 2, which returns to 4 => 0.addr + 0.size = 4.addr
+    #   * 1 calls 2, which returns to 5 => 1.addr + 1.size = 5.addr
+    graph = networkx.DiGraph()
+    nodes = list(map(
+        lambda i: _MockCFGNode(i, graph=graph),
+        range(5)
+    ))
+    graph.add_edge(nodes[0], nodes[2], jumpkind='Ijk_Boring')
+    graph.add_edge(nodes[1], nodes[2])
+    graph.add_edge(nodes[2], nodes[3], jumpkind='Ijk_Ret')
+    graph.add_edge(nodes[2], nodes[4])
+    setattr(nodes[2], 'function_address', 2)
+    setattr(nodes[2], 'is_simprocedure', False)
+    setattr(nodes[0], 'size', 3)
+    setattr(nodes[1], 'size', 3)
+    # Make sure the test setup is correct
+    assert nodes[0].addr + nodes[0].size == nodes[3].addr
+    assert nodes[1].addr + nodes[1].size == nodes[4].addr
+
+    context_sensitive_graph = context_sensitize(graph)
+    new_edges_with_data = [
+        [ e for e in context_sensitive_graph.edges() if e[0].addr == nodes[0].addr and e[1].addr == nodes[2].addr ][0],
+        [ e for e in context_sensitive_graph.edges() if e[0].addr == nodes[2].addr and e[1].addr == nodes[3].addr ][0],
+    ]
+
+    nose.tools.assert_equals(
+        context_sensitive_graph.get_edge_data(*new_edges_with_data[0]),
+        { 'jumpkind': 'Ijk_Boring' }
+    )
+    nose.tools.assert_equals(
+        context_sensitive_graph.get_edge_data(*new_edges_with_data[1]),
+        { 'jumpkind': 'Ijk_Ret' }
+    )

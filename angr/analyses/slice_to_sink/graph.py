@@ -113,6 +113,9 @@ def context_sensitize(graph):
         if len(calling_edge[1].predecessors) == 1 and len(return_edge[0].successors) == 1:
             return
 
+        calling_edge_data = graph.get_edge_data(*calling_edge)
+        return_edge_data = graph.get_edge_data(*return_edge)
+
         graph.remove_edge(*calling_edge)
         graph.remove_edge(*return_edge)
 
@@ -120,8 +123,9 @@ def context_sensitize(graph):
         new_function_entry = new_function_nodes[calling_edge[1]]
         new_function_last_node = new_function_nodes[return_edge[0]]
 
-        graph.add_edge(calling_edge[0], new_function_entry)
-        graph.add_edge(new_function_last_node, return_edge[1])
+        graph.add_edge(calling_edge[0], new_function_entry, **calling_edge_data)
+        graph.add_edge(new_function_last_node, return_edge[1], **return_edge_data)
+
 
     def _node_successors_for_function(node):
         """
