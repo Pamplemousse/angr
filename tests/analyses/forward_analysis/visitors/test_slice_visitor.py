@@ -97,9 +97,7 @@ class TestSliceVisitor():
         class SliceVisitorMock(SliceVisitor):
             def __init__(self, *args):
                 super().__init__(*args)
-            @property
-            def cfg(self):
-                return CFGMock()
+                self._cfg = CFGMock()
         class CFGMock():
             @property
             def graph(self):
@@ -109,19 +107,6 @@ class TestSliceVisitor():
         sorted_nodes = slice_visitor.sort_nodes()
 
         mock_quasi_topological_sort.assert_called_once_with('mock_graph_return')
-
-
-    def test_compute_cfg_of_the_slice_from_original_cfg(self, _):
-        slice_to_visit = SliceToSink(PRINTF, {
-            PRINTF_NODE.predecessors[0].addr: [PRINTF_NODE.addr],
-        })
-        slice_visitor = SliceVisitor(slice_to_visit, CFG)
-
-        slice_cfg = slice_visitor.cfg
-
-        nose.tools.assert_equal(isinstance(slice_cfg, CFGBase), True)
-        nose.tools.assert_equal(len(slice_cfg.graph.edges), 1)
-        nose.tools.assert_equal(len(slice_cfg.graph.nodes), 2)
 
 
     def test_remove_from_sorted_nodes(self, _):
