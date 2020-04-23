@@ -102,11 +102,10 @@ class SimEngineRDVEX(
             else:
                 if any(type(d) is Undefined for d in data):
                     l.info('Data to write at address %#x undefined, ins_addr = %#x.', a, self.ins_addr)
-
-                memloc = MemoryLocation(a, size)
+                memory_location = MemoryLocation(a, size, self._is_close_from_sp(a))
                 # different addresses are not killed by a subsequent iteration, because kill only removes entries
                 # with same index and same size
-                self.state.kill_and_add_definition(memloc, self._codeloc(), data)
+                self.state.kill_and_add_definition(memory_location, self._codeloc(), data)
 
     # sync with _handle_Store()
     def _handle_StoreG(self, stmt):
@@ -244,7 +243,8 @@ class SimEngineRDVEX(
                         pass
 
                 # FIXME: _add_memory_use() iterates over the same loop
-                self.state.add_use(MemoryLocation(a, size), self._codeloc())
+                memory_location = MemoryLocation(a, size, self._is_close_from_sp(a))
+                self.state.add_use(memory_location, self._codeloc())
             else:
                 l.info('Memory address undefined, ins_addr = %#x.', self.ins_addr)
 

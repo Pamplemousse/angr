@@ -1,4 +1,3 @@
-
 class Atom:
     """
     This class represents a data storage location manipulated by IR instructions.
@@ -72,23 +71,30 @@ class Register(Atom):
     def bits(self):
         return self.size * 8
 
-
 class MemoryLocation(Atom):
     """
     Represents a memory slice.
 
     It is characterized by its address and its size.
     """
-    __slots__ = ['addr', 'size']
+    __slots__ = ['addr', 'size', 'is_on_stack']
 
-    def __init__(self, addr, size):
+    def __init__(self, addr, size, is_on_stack=False):
+        """
+        :param int addr: The address of the beginning memory location slice.
+        :param int size: The size of the represented memory location, in bytes.
+        :param bool is_on_stack: A boolean indicating if this memory slice is located on the stack.
+        """
         super(MemoryLocation, self).__init__()
 
         self.addr = addr
         self.size = size
+        self.is_on_stack = is_on_stack
 
     def __repr__(self):
-        return "<Mem %s<%d>>" % (hex(self.addr) if type(self.addr) is int else self.addr, self.size)
+        address_format = hex(self.addr) if type(self.addr) is int else self.addr
+        stack_format = ' (stack)' if self.is_on_stack else ''
+        return "<Mem %s<%d>%s>" % (address_format, self.size, stack_format)
 
     @property
     def bits(self):

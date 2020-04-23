@@ -50,6 +50,11 @@ class SimEngineLight(SimEngine):
                             ins_addr=None if block_only else self.ins_addr,
                             )
 
+    def _is_close_from_sp(self, address):
+        default_sp_value = self.project.arch.get_default_reg_value('sp')
+        stack_offset = default_sp_value - address
+        return stack_offset < 0x100000
+
 
 class SimEngineLightVEXMixin:
 

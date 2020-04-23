@@ -222,12 +222,36 @@ class LiveDefinitions:
             self.all_definitions.add(definition)
 
             if self.dep_graph is not None:
+                stack_use = set(filter(
+                    lambda u: isinstance(u.atom, MemoryLocation) and u.atom.is_on_stack,
+                    self.codeloc_uses
+                ))
+
                 for used in self.codeloc_uses:
-                    # Moderately confusing misnomers. This is an edge from a def to a use, since the
-                    # "uses" are actually the definitions that we're using and the "definition" is the
-                    # new definition; i.e. The def that the old def is used to construct so this is
-                    # really a graph where nodes are defs and edges are uses.
-                    self.dep_graph.add_edge(used, definition)
+                    # There are two cases for which it is superfluous to report a dependency on (a use of) RBP:
+                    #   - The `Definition` *uses* a `MemoryLocation` pointing to the stack;
+                    #   - The `Definition` *is* a `MemoryLocation° pointing to the stack.
+                    is_using_rbp_while_memory_address_on_stack_is_used_too = (
+                        isinstance(used.atom, Register) and
+                        used.atom.reg_offset == 56 and
+                        len(stack_use) == 1
+                    )
+                    is_using_rbp_to_define_memory_location_on_stack = (
+                        isinstance(definition.atom, MemoryLocation) and
+                        definition.atom.is_on_stack and
+                        isinstance(used.atom, Register) and
+                        used.atom.reg_offset == 56
+                    )
+
+                    if not (
+                        is_using_rbp_while_memory_address_on_stack_is_used_too or
+                        is_using_rbp_to_define_memory_location_on_stack
+                    ):
+                        # Moderately confusing misnomers. This is an edge from a def to a use, since the
+                        # "uses" are actually the definitions that we're using and the "definition" is the
+                        # new definition; i.e. The def that the old def is used to construct so this is
+                        # really a graph where nodes are defs and edges are uses.
+                        self.dep_graph.add_edge(used, definition)
 
         return definition
 
