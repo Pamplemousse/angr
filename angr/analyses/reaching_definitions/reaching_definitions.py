@@ -151,13 +151,13 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
         self._analyze()
 
     def _update_kb_content_from_slice(self):
-        # Removes the nodes that are not in the slice from the CFG.
+        # Remove the nodes that are not in the slice from the CFG.
         cfg = self.kb.cfgs['CFGFast']
         slice_cfg_graph(cfg.graph, self._subject.content)
         for node in cfg.nodes():
             node._cfg_model = cfg
 
-        # Removes the functions for which entrypoints are not present in the slice.
+        # Remove the functions for which entrypoints are not present in the slice.
         for f in self.kb.functions:
             if f not in self._subject.content.nodes:
                 del self.kb.functions[f]
@@ -351,11 +351,6 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
 
         block_key = node.addr
         self._node_iterations[block_key] += 1
-
-        # The Slice analysis happens recursively, so there will be no need to "start" any RDA from nodes that were
-        # analysed "down the stack" during a run on a node.
-        if self._subject.type == SubjectType.CFGSliceToSink:
-            self._graph_visitor.remove_from_sorted_nodes(self._visited_blocks)
 
         self.node_observe(node.addr, state, OP_AFTER)
 

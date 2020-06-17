@@ -532,8 +532,15 @@ class SimEngineRDVEX(
         if ext_func_name is not None:
             handler_name = 'handle_%s' % ext_func_name
             if hasattr(self._function_handler, handler_name):
-                executed_rda, state = getattr(self._function_handler, handler_name)(self.state, self._codeloc())
-                self.state = state
+                executed_rda, state, visited_blocks, dep_graph = getattr(self._function_handler, handler_name)(
+                    self.state,
+                    func_addr_int,
+                    self._call_stack,
+                    self._maximum_local_call_depth,
+                    self._visited_blocks,
+                    self._dep_graph,
+                    self._codeloc(),
+                )
             else:
                 l.warning('Please implement the external function handler for %s() with your own logic.',
                           ext_func_name)
