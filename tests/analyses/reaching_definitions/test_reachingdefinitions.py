@@ -79,7 +79,7 @@ class TestReachingDefinitions(TestCase):
     def _run_reaching_definition_analysis_test(self, project, function, result_path, _extract_result):
         tmp_kb = angr.KnowledgeBase(project)
         reaching_definition = project.analyses.ReachingDefinitions(
-            subject=function, kb=tmp_kb, observe_all=True, call_stack=[],
+            subject=function, kb=tmp_kb, observe_all=True,
         )
 
         result = _extract_result(reaching_definition)
@@ -228,70 +228,6 @@ class TestReachingDefinitions(TestCase):
             zip(results, expected_results)
         ))
 
-    def test_init_the_call_stack_with_a_block_as_subject_add_its_owning_function_to_the_call_stack(self):
-        binary_path = _binary_path('all')
-        project = angr.Project(binary_path, load_options={'auto_load_libs': False})
-        cfg = project.analyses.CFGFast()
-
-        _start = cfg.kb.functions['_start']
-        __libc_start_main = cfg.kb.functions['__libc_start_main']
-        call_stack = [ _start.addr, __libc_start_main.addr ]
-
-        main_function = cfg.kb.functions['main']
-        main_address = main_function.addr
-        main_block = Block(addr=main_address, project=project)
-
-        reaching_definitions = project.analyses.ReachingDefinitions(subject=main_block, call_stack=call_stack)
-        expected_call_stack = call_stack + [ main_function.addr ]
-
-        self.assertEqual(reaching_definitions._call_stack, expected_call_stack)
-
-    def test_init_the_call_stack_with_another_block_as_subject_does_not_deepen_the_call_stack(self):
-        binary_path = _binary_path('all')
-        project = angr.Project(binary_path, load_options={'auto_load_libs': False})
-        cfg = project.analyses.CFGFast()
-
-        _start = cfg.kb.functions['_start']
-        __libc_start_main = cfg.kb.functions['__libc_start_main']
-        initial_call_stack = [ _start.addr, __libc_start_main.addr ]
-
-        main_function = cfg.kb.functions['main']
-        main_address = main_function.addr
-        main_block = Block(addr=main_address, project=project)
-        another_block_in_main = Block(addr=0x4006fd, project=project)
-
-        new_call_stack = project.analyses.ReachingDefinitions(
-            subject=main_block,
-            call_stack=initial_call_stack
-        )._call_stack
-
-        reaching_definitions = project.analyses.ReachingDefinitions(
-            subject=another_block_in_main,
-            call_stack=new_call_stack
-        )
-        expected_call_stack = initial_call_stack + [ main_function.addr ]
-
-        self.assertEqual(reaching_definitions._call_stack, expected_call_stack)
-
-    def test_init_the_call_stack_with_a_function_as_subject_adds_it_to_the_call_stack(self):
-        binary_path = _binary_path('all')
-        project = angr.Project(binary_path, load_options={'auto_load_libs': False})
-        cfg = project.analyses.CFGFast()
-
-        _start = cfg.kb.functions['_start']
-        __libc_start_main = cfg.kb.functions['__libc_start_main']
-        initial_call_stack = [ _start.addr, __libc_start_main.addr ]
-
-        main_function = cfg.kb.functions['main']
-
-        reaching_definitions = project.analyses.ReachingDefinitions(
-            subject=main_function,
-            call_stack=initial_call_stack
-        )
-        expected_call_stack = initial_call_stack + [ main_function.addr ]
-
-        self.assertEqual(reaching_definitions._call_stack, expected_call_stack)
-
     def test_reaching_definition_analysis_exposes_its_subject(self):
         binary_path = _binary_path('all')
         project = angr.Project(binary_path, load_options={'auto_load_libs': False})
@@ -421,12 +357,11 @@ class TestReachingDefinitions(TestCase):
         main = cfg.functions['main']
 
         project.analyses.CompleteCallingConventions(recover_variables=True)
-        rda = project.analyses.ReachingDefinitions(subject=main, track_tmps=False, call_stack=[])
+        rda = project.analyses.ReachingDefinitions(subject=main, track_tmps=False)
 
         # 4007ae
         # rsi and rdi are all used by authenticate()
-        context = (main.addr, )
-        code_location = CodeLocation(0x4007a0, DEFAULT_STATEMENT, ins_addr=0x4007ae, context=context)
+        code_location = CodeLocation(0x4007a0, DEFAULT_STATEMENT, ins_addr=0x4007ae)
         uses = rda.all_uses.get_uses_by_location(code_location)
         self.assertEqual(len(uses), 2)
         auth_rdi = next(iter(filter(

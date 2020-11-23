@@ -600,7 +600,7 @@ class SimEngineRDVEX(
                 executed_rda, state, visited_blocks, dep_graph = getattr(self._function_handler, handler_name)(
                     self.state,
                     func_addr_int,
-                    self._call_stack,
+                    self._call_stack + [(func_addr_int, self._codeloc())],
                     self._maximum_local_call_depth,
                     self._visited_blocks,
                     self._dep_graph,

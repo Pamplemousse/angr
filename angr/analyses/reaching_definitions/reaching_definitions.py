@@ -8,6 +8,7 @@ import pyvex
 
 from ...block import Block
 from ...knowledge_plugins.cfg.cfg_node import CFGNode
+from ...code_location import CodeLocation
 from ...codenode import CodeNode
 from ...engines.light import SimEngineLight
 from ...knowledge_plugins.functions import Function
@@ -43,9 +44,9 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
 
     def __init__(self, subject: Union[Subject,ailment.Block,Block,Function]=None, func_graph=None, max_iterations=3,
                  track_tmps=False, observation_points=None, init_state: ReachingDefinitionsState=None, cc=None,
-                 function_handler=None, call_stack: Optional[List[int]]=None, maximum_local_call_depth=5,
-                 observe_all=False, visited_blocks=None, dep_graph: Optional['DepGraph']=None, observe_callback=None,
-                 canonical_size=8):
+                 function_handler=None, call_stack: Optional[List[Tuple[int,Optional[CodeLocation]]]]=None,
+                 maximum_local_call_depth=5, observe_all=False, visited_blocks=None,
+                 dep_graph: Optional['DepGraph']=None, observe_callback=None, canonical_size=8):
         """
         :param subject:                         The subject of the analysis: a function, or a single basic block
         :param func_graph:                      Alternative graph for function.graph.
@@ -63,11 +64,12 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
         :param FunctionHandler function_handler:
                                                 The function handler to update the analysis state and results on
                                                 function calls.
-        :param call_stack:                      An ordered list of Function addresses representing the call stack
-                                                leading to the analysed subject, from older to newer calls. Setting it
-                                                to None to limit the analysis to a single function and disable call
-                                                stack tracking; In that case, all contexts in CodeLocation will be
-                                                None, which makes CodeLocation objects contextless.
+        :param call_stack:                      An ordered list of Function addresses, with their respective callsites
+                                                location if available, representing the call stack leading to the
+                                                analysed subject, from older to newer calls. Setting it to None limits
+                                                the analysis to a single function and disable call stack tracking;
+                                                In that case, all contexts in CodeLocation will be None, which makes
+                                                CodeLocation objects contextless.
         :param int maximum_local_call_depth:    Maximum local function recursion depth.
         :param Boolean observe_all:             Observe every statement, both before and after.
         :param visited_blocks:                  A set of previously visited blocks.
@@ -100,9 +102,7 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
         else:
             self._function_handler = function_handler.hook(self)
 
-        self._call_stack: Optional[List[int]] = None
-        if call_stack is not None:
-            self._call_stack = self._init_call_stack(call_stack, subject)
+        self._call_stack: List[Tuple[int,Optional[CodeLocation]]] = call_stack or []
 
         if self._init_state is not None:
             self._init_state = self._init_state.copy()
@@ -136,29 +136,6 @@ class ReachingDefinitionsAnalysis(ForwardAnalysis, Analysis):  # pylint:disable=
             func_addr=self.subject.content.addr if isinstance(self.subject.content, Function) else None)
 
         self._analyze()
-
-    def _init_call_stack(self, call_stack: List[int], subject) -> List[int]:
-        if self._subject.type == SubjectType.Function:
-            return call_stack + [subject.addr]
-        elif self._subject.type == SubjectType.Block:
-            cfg = self.kb.cfgs.get_most_accurate()
-            if cfg is None:
-                # no CFG exists
-                return call_stack
-            cfg_node = cfg.get_any_node(subject.addr)
-            if cfg_node is None:
-                # we don't know which function this node belongs to
-                return call_stack
-            function_address = cfg_node.function_address
-            function = self.kb.functions.function(function_address)
-            if len(call_stack) > 0 and call_stack[-1] == function.addr:
-                return call_stack
-            else:
-                return call_stack + [function.addr]
-        elif self._subject.type == SubjectType.CallTrace:
-            return call_stack + [self._subject.content.current_function_address()]
-        else:
-            raise ValueError('Unexpected subject type %s.' % self._subject.type)
 
     @property
     def observed_results(self) -> Dict[Tuple[str,int,int],LiveDefinitions]:

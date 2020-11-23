@@ -516,7 +516,7 @@ class SimEngineRDAIL(
                 is_updated, state, visited_blocks, dep_graph = getattr(self._function_handler, handler_name)(
                     self.state,
                     ip_addr,
-                    self._call_stack,
+                    self._call_stack + [(ip_addr, self.codeloc())],
                     self._maximum_local_call_depth,
                     self._visited_blocks,
                     self._dep_graph,
